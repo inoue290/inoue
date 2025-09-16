@@ -66,23 +66,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // スワイプ操作
   let startX, startY;
-  const moveSpeed = 20;
-
+  let velocityX = 0;
+  let velocityY = 0;
+  let isMoving = false;
+  
+  const friction = 0.95; // 摩擦係数（0.9〜0.98くらいで調整）
+  const minVelocity = 0.5; // これ以下になったら止める
+  
   canvas.addEventListener("touchstart", e => {
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
+    isMoving = false; // 新しいスワイプ開始で移動停止
   });
-
+  
   canvas.addEventListener("touchend", e => {
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
-
-    let moveX = 0, moveY = 0;
-    if (Math.abs(dx) > Math.abs(dy)) moveX = dx > 0 ? moveSpeed : -moveSpeed;
-    else moveY = dy > 0 ? moveSpeed : -moveSpeed;
-
-    socket.emit("move", { x: moveX, y: moveY });
+  
+    const scale = 0.3; // スワイプ距離 → 速度スケーリング
+    velocityX = dx * scale;
+    velocityY = dy * scale;
+  
+    isMoving = true;
+    animateMove();
   });
+  
+  function animateMove() {
+    if (!isMoving) return;
+  
+    // 速度が小さくなったら止める
+    if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
+      isMoving = false;
+      return;
+    }
+  
+    // 位置更新（Socketへ送信など）
+    socket.emit("move", { x: velocityX, y: velocityY });
+  
+    // 慣性（減速）
+    velocityX *= friction;
+    velocityY *= friction;
+  
+    // 次のフレームへ
+    requestAnimationFrame(animateMove);
+  }
 });
+
