@@ -1,17 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>4対戦ゲーム</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <title>Inoue Game</title>
   <style>
-    canvas { background: #eee; display: block; margin: 0 auto; }
+    body { margin:0; }
+    canvas { display:block; margin:0 auto; background:#000; }
   </style>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="./client.js"></script>
 </head>
 <body>
-  <canvas id="game" width="338" height="600"></canvas>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
+  <canvas id="game" width="400" height="600"></canvas>
 </body>
 </html>
+
+
 
