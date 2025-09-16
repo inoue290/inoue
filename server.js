@@ -9,22 +9,20 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 let players = {};
-const assets = ["char1.png", "char2.png", "char3.png", "char4.png"];
+const assetList = ["char1.png", "char2.png", "char3.png", "char4.png"];
 
 io.on("connection", (socket) => {
   console.log("接続:", socket.id);
 
   // ランダムでアセット割り当て
-  const randomAsset = assets[Math.floor(Math.random() * assets.length)];
+  const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
   players[socket.id] = { x: 100, y: 100, hp: 100, asset: randomAsset };
 
-  // 現在のプレイヤー一覧を送信
+  // 全プレイヤー送信
   socket.emit("currentPlayers", players);
-
-  // 新規プレイヤーを全員に通知
   socket.broadcast.emit("newPlayer", { id: socket.id, ...players[socket.id] });
 
-  // 移動イベント
+  // 移動
   socket.on("move", (data) => {
     if (players[socket.id]) {
       players[socket.id].x += data.x;
@@ -33,7 +31,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ダメージイベント
+  // ダメージ
   socket.on("hit", (targetId) => {
     if (players[targetId]) {
       players[targetId].hp -= 10;
@@ -55,3 +53,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
+
