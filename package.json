@@ -1,5 +1,5 @@
 {
-  "name": "inoue",
+  "name": "multiplayer-game",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
@@ -10,5 +10,7 @@
     "socket.io": "^4.7.2"
   }
 }
+
+
 
 
