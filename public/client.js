@@ -48,8 +48,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // 各プレイヤー描画
     for (let id in players) {
       const p = players[id];
-      const img = images[p.asset];
-      if (img) {
+      const imgIndex = assetList.indexOf(p.asset);
+      const img = images[imgIndex];
+      if (img && img.complete) {
         const charSize = canvas.width * 0.1; // 画面幅の10%
         ctx.drawImage(img, p.x, p.y, charSize, charSize);
 
@@ -92,4 +93,3 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("moveTo", { x, y });
   });
 });
-
