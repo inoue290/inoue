@@ -18,10 +18,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // キャラ画像 4種類
   const assetList = [
-    "/assets/chara1.png",
-    "/assets/chara2.png",
-    "/assets/chara3.png",
-    "/assets/chara4.png"
+    "/assets/char1.png",
+    "/assets/char2.png",
+    "/assets/char3.png",
+    "/assets/char4.png"
   ];
 
   // 画像読み込み
@@ -92,3 +92,4 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("moveTo", { x, y });
   });
 });
+
