@@ -26,7 +26,7 @@ io.on("connection", (socket) => {
 
   // ランダムでアセット割り当て
   const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
-  players[socket.id] = { x: 100, y: 100, hp: 100, asset: randomAsset };
+  players[socket.id] = { x:100, y:100, hp:100, asset: randomIndex };
 
   // 全プレイヤー送信
   socket.emit("state", players);
@@ -64,3 +64,4 @@ io.on("connection", (socket) => {
 // Render の環境変数 PORT を使う
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
