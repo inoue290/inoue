@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", resizeCanvas);
 
   let players = {};
-  let myPlayerId = null; // 自分のプレイヤーID
+  let myPlayerId = null;
   const images = {};
 
   // フィールド画像
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
   socket.on("state", serverPlayers => {
     players = serverPlayers;
 
-    // 初回のみ、自分のプレイヤーを仮設定
+    // 自分のIDを初回に設定
     if (!myPlayerId) {
       myPlayerId = Object.keys(players)[0];
     }
@@ -77,9 +77,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let velocityY = 0;
   let isMoving = false;
 
-  const friction = 0.95;  // 摩擦係数
-  const minVelocity = 0.5; // 停止閾値
-  const size = 50;          // キャラクターサイズ（仮）
+  const friction = 0.95;
+  const minVelocity = 0.5;
 
   canvas.addEventListener("touchstart", e => {
     const t = e.touches[0];
@@ -92,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    const scale = 0.3; // スワイプ距離 → 速度スケーリング
+    const scale = 0.3; // スワイプ距離 → 速度
     velocityX = dx * scale;
     velocityY = dy * scale;
 
@@ -106,30 +105,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isMoving) return;
     if (!myPlayerId || !players[myPlayerId]) return;
 
-    const me = players[myPlayerId];
-
-    // 停止判定
+    // 速度が小さくなったら停止
     if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
       isMoving = false;
       return;
     }
 
-    // 座標更新
-    me.x += velocityX;
-    me.y += velocityY;
-
-    // 画面の境界で反射
-    if (me.x <= 0) { me.x = 0; velocityX = -velocityX; }
-    else if (me.x + size >= canvas.width) { me.x = canvas.width - size; velocityX = -velocityX; }
-    if (me.y <= 0) { me.y = 0; velocityY = -velocityY; }
-    else if (me.y + size >= canvas.height) { me.y = canvas.height - size; velocityY = -velocityY; }
+    // ★ここで座標は加算せず、加算分だけサーバーに送信
+    socket.emit("move", { x: velocityX, y: velocityY });
 
     // 慣性減速
     velocityX *= friction;
     velocityY *= friction;
-
-    // ★絶対座標で送信
-    socket.emit("move", { x: me.x, y: me.y });
 
     draw();
     requestAnimationFrame(animateMove);
