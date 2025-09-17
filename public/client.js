@@ -53,22 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const img = images[p.asset];
       if (img && img.complete) {
         const size = canvas.width * 0.15;
+        ctx.drawImage(img, p.x, p.y, size, size);
     
-        ctx.save();
-    
-        if (p.direction === "left") {
-          // 左向きのとき
-          ctx.translate(p.x + size, p.y); // 右端を基準に
-          ctx.scale(-1, 1);               // X方向を反転
-          ctx.drawImage(img, 0, 0, size, size);
-        } else {
-          // 右向き（通常）
-          ctx.drawImage(img, p.x, p.y, size, size);
-        }
-    
-        ctx.restore();
-    
-        // HPバーは通常通り描画（座標変形の影響を受けない）
+        // HPバー
         ctx.fillStyle = "red";
         ctx.fillRect(p.x, p.y - 12, size, 5);
         ctx.fillStyle = "green";
@@ -168,6 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
 
 
 
