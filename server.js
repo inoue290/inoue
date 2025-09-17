@@ -11,8 +11,8 @@ app.use(express.static("public"));
 let players = {};
 const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 
-const canvasWidth = 378;
-const canvasHeight = 632;
+const canvasWidth = 352;
+const canvasHeight = 606;
 const playerSize = 50;
 const friction = 0.95;
 const minVelocity = 0.5;
@@ -104,5 +104,6 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
 
