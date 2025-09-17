@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    const scale = 0.1; // スワイプ距離→速度
+    const scale = 0.18; // スワイプ距離→速度
     socket.emit("move", { x: dx*scale, y: dy*scale });
   });
 
@@ -91,4 +91,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   animate();
 });
+
 
