@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const p = players[id];
       const img = images[p.asset];
       if (img && img.complete) {
-        const size = canvas.width * 0.15;
+        const size = 100; //const size = canvas.width * 0.15;
 
         ctx.save();
         if (p.dir === -1) {
@@ -91,5 +91,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   animate();
 });
+
 
 
