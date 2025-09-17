@@ -46,9 +46,9 @@ players[socket.id] = { x: randomX, y: randomY, hp: 100, asset: randomAsset };
     if (p.y < 0) p.y = 0;
 
     // 画面サイズは固定ならここで制限可能
-    // 例: canvasWidth = 600, canvasHeight = 1000
-    const canvasWidth = 600;
-    const canvasHeight = 1000;
+    // 例: canvasWidth = 330, canvasHeight = 600
+    const canvasWidth = 330;
+    const canvasHeight = 600;
     if (p.x > canvasWidth - 100) p.x = canvasWidth - 100;
     if (p.y > canvasHeight - 100) p.y = canvasHeight - 100;
 
@@ -83,4 +83,5 @@ players[socket.id] = { x: randomX, y: randomY, hp: 100, asset: randomAsset };
 // ポート設定（Render では process.env.PORT）
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
