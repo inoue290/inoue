@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", resizeCanvas);
 
   let players = {};
+  let myPlayerId = null; // 自分のプレイヤーID的扱い
   const images = {};
 
   // フィールド画像
@@ -19,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fieldImg.src = "/assets/field.png";
   fieldImg.onload = () => draw();
 
-  // キャラクター画像（サーバーとキーを統一）
+  // キャラクター画像
   const assetList = ["char1.png", "char2.png", "char3.png", "char4.png"];
   assetList.forEach(src => {
     const img = new Image();
@@ -31,6 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // サーバーからプレイヤー情報を受信
   socket.on("state", serverPlayers => {
     players = serverPlayers;
+
+    // 初回のみ、自分のプレイヤーを仮設定
+    if (!myPlayerId) {
+      myPlayerId = Object.keys(players)[0];
+    }
+
     draw();
   });
 
@@ -54,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (img && img.complete) {
         const size = canvas.width * 0.15;
         ctx.drawImage(img, p.x, p.y, size, size);
-    
+
         // HPバー
         ctx.fillStyle = "red";
         ctx.fillRect(p.x, p.y - 12, size, 5);
@@ -64,78 +71,81 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-    // スワイプ操作
-    let startX, startY;
-    let velocityX = 0;
-    let velocityY = 0;
-    let isMoving = false;
-    
-    const friction = 0.95;  // 摩擦係数
-    const minVelocity = 0.5; // これ以下になったら停止
-    const size = 50; // キャラクターサイズ（固定 or 計算してもOK）
-    
-    canvas.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-    });
-    
-    canvas.addEventListener("touchend", e => {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-    
-      const scale = 0.3; // スワイプ距離 → 速度スケーリング
-      velocityX = dx * scale;
-      velocityY = dy * scale;
-    
-      if (!isMoving) {      // ★二重実行を防ぐ
-        isMoving = true;
-        animateMove();
-      }
-    });
-    
-    function animateMove() {
-      if (!isMoving) return;
-    
-      // 速度が小さくなったら停止
-      if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
-        isMoving = false;
-        return;
-      }
-    
-      // 座標更新
-      players.x += velocityX;
-      players.y += velocityY;
-    
-      // 画面の境界で反射
-      if (players.x <= 0) {
-        players.x = 0;
-        velocityX = -velocityX;
-      } else if (players.x + size >= canvas.width) {
-        players.x = canvas.width - size;
-        velocityX = -velocityX;
-      }
-    
-      if (players.y <= 0) {
-        players.y = 0;
-        velocityY = -velocityY;
-      } else if (players.y + size >= canvas.height) {
-        players.y = canvas.height - size;
-        velocityY = -velocityY;
-      }
-    
-      // 慣性減速
-      velocityX *= friction;
-      velocityY *= friction;
-    
-      // サーバー送信など
-      socket.emit("move", { x: players.x, y: players.y });
-    
-      requestAnimationFrame(animateMove);
-    }
-});
+  // --- スワイプ操作 ---
+  let startX, startY;
+  let velocityX = 0;
+  let velocityY = 0;
+  let isMoving = false;
 
+  const friction = 0.95;  // 摩擦係数
+  const minVelocity = 0.5; // 停止閾値
+  const size = 50;          // キャラクターサイズ（仮）
+
+  canvas.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+  });
+
+  canvas.addEventListener("touchend", e => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    const scale = 0.3; // スワイプ距離 → 速度スケーリング
+    velocityX = dx * scale;
+    velocityY = dy * scale;
+
+    if (!isMoving) {
+      isMoving = true;
+      animateMove();
+    }
+  });
+
+  function animateMove() {
+    if (!isMoving) return;
+    if (!myPlayerId || !players[myPlayerId]) return;
+
+    const me = players[myPlayerId];
+
+    // 停止判定
+    if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
+      isMoving = false;
+      return;
+    }
+
+    // 座標更新
+    me.x += velocityX;
+    me.y += velocityY;
+
+    // 画面の境界で反射
+    if (me.x <= 0) {
+      me.x = 0;
+      velocityX = -velocityX;
+    } else if (me.x + size >= canvas.width) {
+      me.x = canvas.width - size;
+      velocityX = -velocityX;
+    }
+
+    if (me.y <= 0) {
+      me.y = 0;
+      velocityY = -velocityY;
+    } else if (me.y + size >= canvas.height) {
+      me.y = canvas.height - size;
+      velocityY = -velocityY;
+    }
+
+    // 慣性減速
+    velocityX *= friction;
+    velocityY *= friction;
+
+    // サーバー送信（現在の加算速度を送信）
+    socket.emit("move", { x: velocityX, y: velocityY });
+
+    draw();
+    requestAnimationFrame(animateMove);
+  }
+});
 
 
 
