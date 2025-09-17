@@ -109,6 +109,20 @@ document.addEventListener("DOMContentLoaded", () => {
     velocityX *= friction;
     velocityY *= friction;
   
+    // 画面の境界で反射
+    if (canvas.width < 0 || canvas.height < 0) return;
+    const size = canvas.width * 0.15; // キャラクターサイズ
+    
+    // x軸反射（左右）
+    if (players.x <= 0 || players.x + size >= canvas.width) {
+      velocityX = -velocityX;
+    }
+    
+    // y軸反射（上下）
+    if (players.y <= 0 || players.y + size >= canvas.height) {
+      velocityY = -velocityY;
+    }
+  
     // 次のフレームへ
     requestAnimationFrame(animateMove);
   }
