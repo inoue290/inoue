@@ -72,7 +72,16 @@ let isMoving = false;
 
 const friction = 0.95;  // 摩擦係数
 const minVelocity = 0.5; // これ以下になったら停止
-const size = 50; // キャラクターサイズ（固定 or 計算してもOK）
+const size = 50; // キャラクターサイズ
+
+// ベクトル反射関数
+function reflectVector(vx, vy, nx, ny) {
+  const dot = vx * nx + vy * ny; // 内積
+  return {
+    x: vx - 2 * dot * nx,
+    y: vy - 2 * dot * ny
+  };
+}
 
 canvas.addEventListener("touchstart", e => {
   const t = e.touches[0];
@@ -89,7 +98,7 @@ canvas.addEventListener("touchend", e => {
   velocityX = dx * scale;
   velocityY = dy * scale;
 
-  if (!isMoving) {      // ★二重実行を防ぐ
+  if (!isMoving) {  // ★二重実行を防ぐ
     isMoving = true;
     animateMove();
   }
@@ -108,21 +117,31 @@ function animateMove() {
   players.x += velocityX;
   players.y += velocityY;
 
-  // 画面の境界で反射
+  // 壁での反射処理
+  // 左右の壁
   if (players.x <= 0) {
     players.x = 0;
-    velocityX = -velocityX;
+    const r = reflectVector(velocityX, velocityY, 1, 0); // 法線 (1,0)
+    velocityX = r.x;
+    velocityY = r.y;
   } else if (players.x + size >= canvas.width) {
     players.x = canvas.width - size;
-    velocityX = -velocityX;
+    const r = reflectVector(velocityX, velocityY, -1, 0); // 法線 (-1,0)
+    velocityX = r.x;
+    velocityY = r.y;
   }
 
+  // 上下の壁
   if (players.y <= 0) {
     players.y = 0;
-    velocityY = -velocityY;
+    const r = reflectVector(velocityX, velocityY, 0, 1); // 法線 (0,1)
+    velocityX = r.x;
+    velocityY = r.y;
   } else if (players.y + size >= canvas.height) {
     players.y = canvas.height - size;
-    velocityY = -velocityY;
+    const r = reflectVector(velocityX, velocityY, 0, -1); // 法線 (0,-1)
+    velocityX = r.x;
+    velocityY = r.y;
   }
 
   // 慣性減速
@@ -134,7 +153,7 @@ function animateMove() {
 
   requestAnimationFrame(animateMove);
 }
-
 });
+
 
 
