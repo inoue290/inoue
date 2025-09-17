@@ -28,19 +28,12 @@ document.addEventListener("DOMContentLoaded", () => {
     images[src] = img;
   });
 
-  // サーバーからプレイヤー情報を受信
+  // サーバーから自分のID
+  socket.on("myId", id => myPlayerId = id);
+
+  // サーバーから状態更新
   socket.on("state", serverPlayers => {
     players = serverPlayers;
-    // 初回だけ自分のIDを取得
-    if (!myPlayerId) {
-      myPlayerId = Object.keys(players)[0];
-    }
-    // 向き情報初期化
-    for (let id in players) {
-      if (players[id].dir === undefined) players[id].dir = 1;
-      // 描画向きは速度Xの符号に従う
-      if (players[id].vx !== undefined) players[id].dir = players[id].vx >= 0 ? 1 : -1;
-    }
     draw();
   });
 
@@ -59,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.save();
         if (p.dir === -1) {
           ctx.translate(p.x + size/2, 0);
-          ctx.scale(-1, 1);
+          ctx.scale(-1,1);
           ctx.drawImage(img, -size/2, p.y, size, size);
         } else {
           ctx.drawImage(img, p.x, p.y, size, size);
@@ -70,14 +63,13 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillStyle = "red";
         ctx.fillRect(p.x, p.y - 12, size, 5);
         ctx.fillStyle = "green";
-        ctx.fillRect(p.x, p.y - 12, (p.hp / 100) * size, 5);
+        ctx.fillRect(p.x, p.y - 12, (p.hp/100)*size, 5);
       }
     }
   }
 
   // --- スワイプ操作 ---
   let startX, startY;
-
   canvas.addEventListener("touchstart", e => {
     const t = e.touches[0];
     startX = t.clientX;
@@ -90,19 +82,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const dy = t.clientY - startY;
 
     const scale = 0.3; // スワイプ距離→速度
-    const vx = dx * scale;
-    const vy = dy * scale;
-
-    // サーバーに移動量を送信
-    socket.emit("move", { x: vx, y: vy });
+    socket.emit("move", { x: dx*scale, y: dy*scale });
   });
 
-  // クライアント側は描画のみ
   function animate() {
     draw();
     requestAnimationFrame(animate);
   }
   animate();
 });
-
-
