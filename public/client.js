@@ -53,22 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const img = images[p.asset];
       if (img && img.complete) {
         const size = canvas.width * 0.15;
-    
-        ctx.save();
-    
-        if (p.direction === "left") {
-          // 左向き：スケールを -1 にして反転
-          ctx.scale(-1, 1);
-          // x 座標も反転後の描画位置に合わせる
-          ctx.drawImage(img, -(p.x + size), p.y, size, size);
-        } else {
-          // 右向き：普通に描画
-          ctx.drawImage(img, p.x, p.y, size, size);
-        }
-    
-        ctx.restore();
-    
-        // HPバー（反転しても位置は同じ）
+        ctx.drawImage(img, p.x, p.y, size, size);
+
+        // HPバー
         ctx.fillStyle = "red";
         ctx.fillRect(p.x, p.y - 12, size, 5);
         ctx.fillStyle = "green";
@@ -167,6 +154,7 @@ function animateMove() {
   requestAnimationFrame(animateMove);
 }
 });
+
 
 
 
