@@ -17,9 +17,17 @@ const assetList = ["char1.png", "char2.png", "char3.png", "char4.png"];
 io.on("connection", (socket) => {
   console.log("接続:", socket.id);
 
-  // ランダムでキャラ割り当て
-  const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
-  players[socket.id] = { x: 50, y: 50, hp: 100, asset: randomAsset };
+// ゲーム画面の幅と高さを338x600に設定
+const gameWidth = 338;
+const gameHeight = 600;
+// ランダムな位置を生成
+const randomX = Math.floor(Math.random() * gameWidth);
+const randomY = Math.floor(Math.random() * gameHeight);
+// ランダムなキャラを選択
+const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
+// プレイヤー情報にランダムな位置とキャラを設定
+players[socket.id] = { x: randomX, y: randomY, hp: 100, asset: randomAsset };
+
 
   // 現在のプレイヤー状態送信
   socket.emit("state", players);
@@ -75,3 +83,4 @@ io.on("connection", (socket) => {
 // ポート設定（Render では process.env.PORT）
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
