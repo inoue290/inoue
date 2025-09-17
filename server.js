@@ -11,66 +11,47 @@ app.use(express.static("public"));
 
 // プレイヤー情報
 let players = {};
-const assetList = ["char1.png", "char2.png", "char3.png", "char4.png"];
+const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 
-// 接続時
-io.on("connection", (socket) => {
+// ゲーム画面サイズ
+const canvasWidth = 400;
+const canvasHeight = 664;
+const playerSize = 50;
+const friction = 0.95;
+const minVelocity = 0.5;
+
+io.on("connection", socket => {
   console.log("接続:", socket.id);
 
-// ゲーム画面の幅と高さを338x600に設定
-const gameWidth = 338;
-const gameHeight = 600;
-// ランダムな位置を生成
-const randomX = Math.floor(Math.random() * gameWidth);
-const randomY = Math.floor(Math.random() * gameHeight);
-// ランダムなキャラを選択
-const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
-// プレイヤー情報にランダムな位置とキャラを設定
-players[socket.id] = { x: randomX, y: randomY, hp: 100, asset: randomAsset };
+  // ランダムな初期位置とキャラクター
+  const randomX = Math.floor(Math.random() * (canvasWidth - playerSize));
+  const randomY = Math.floor(Math.random() * (canvasHeight - playerSize));
+  const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
 
+  players[socket.id] = {
+    x: randomX,
+    y: randomY,
+    hp: 100,
+    asset: randomAsset,
+    vx: 0,
+    vy: 0,
+    dir: 1
+  };
 
-  // 現在のプレイヤー状態送信
   socket.emit("state", players);
   socket.broadcast.emit("state", players);
 
-  // 移動イベント（スワイプ）
-  socket.on("move", (data) => {
+  // クライアントからの移動入力
+  socket.on("move", data => {
     const p = players[socket.id];
     if (!p) return;
 
-    p.x += data.x;
-    p.y += data.y;
+    // 入力を速度に加算
+    p.vx += data.x;
+    p.vy += data.y;
 
-    // 画面端で止める
-    if (p.x < 0) p.x = 0;
-    if (p.y < 0) p.y = 0;
-
-    // 画面サイズは固定ならここで制限可能
-    // 例: canvasWidth = 400, canvasHeight = 664
-    const canvasWidth = 400;
-    const canvasHeight = 664;
-    if (p.x > canvasWidth - 100) p.x = canvasWidth - 100;
-    if (p.y > canvasHeight - 100) p.y = canvasHeight - 100;
-
-    // 当たり判定: 他プレイヤーとの距離が近ければダメージ
-    for (let id in players) {
-      if (id === socket.id) continue;
-      const other = players[id];
-      const dx = p.x - other.x;
-      const dy = p.y - other.y;
-      const distance = Math.sqrt(dx*dx + dy*dy);
-      if (distance < 50) { // 当たり判定半径
-        other.hp -= 10;
-        if (other.hp <= 0) {
-          // 死亡したプレイヤーに通知
-          io.to(id).emit("youDied");
-          delete players[id];
-        }
-      }
-    }
-
-    // 全員に状態を送信
-    io.emit("state", players);
+    // 向きはX速度の符号
+    if (p.vx !== 0) p.dir = p.vx >= 0 ? 1 : -1;
   });
 
   socket.on("disconnect", () => {
@@ -80,9 +61,49 @@ players[socket.id] = { x: randomX, y: randomY, hp: 100, asset: randomAsset };
   });
 });
 
-// ポート設定（Render では process.env.PORT）
+// ゲームループ（サーバー側で座標・反射・衝突を更新）
+setInterval(() => {
+  for (let id in players) {
+    const p = players[id];
+
+    // 座標更新
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // 壁での反射
+    if (p.x <= 0) { p.x = 0; p.vx = Math.abs(p.vx); p.dir = 1; }
+    if (p.x + playerSize >= canvasWidth) { p.x = canvasWidth - playerSize; p.vx = -Math.abs(p.vx); p.dir = -1; }
+    if (p.y <= 0) { p.y = 0; p.vy = Math.abs(p.vy); }
+    if (p.y + playerSize >= canvasHeight) { p.y = canvasHeight - playerSize; p.vy = -Math.abs(p.vy); }
+
+    // 慣性減速
+    p.vx *= friction;
+    p.vy *= friction;
+    if (Math.abs(p.vx) < minVelocity) p.vx = 0;
+    if (Math.abs(p.vy) < minVelocity) p.vy = 0;
+
+    // 他プレイヤーとの当たり判定
+    for (let otherId in players) {
+      if (otherId === id) continue;
+      const o = players[otherId];
+      const dx = p.x - o.x;
+      const dy = p.y - o.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < playerSize) {
+        o.hp -= 10;
+        if (o.hp <= 0) {
+          io.to(otherId).emit("youDied");
+          delete players[otherId];
+        }
+      }
+    }
+  }
+
+  // 全員に状態送信
+  io.emit("state", players);
+
+}, 1000/60); // 60FPS相当
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
-
-
 
