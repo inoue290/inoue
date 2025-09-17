@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", resizeCanvas);
 
   let players = {};
-  let myPlayerId = null; // 自分のプレイヤーID的扱い
+  let myPlayerId = null; // 自分のプレイヤーID
   const images = {};
 
   // フィールド画像
@@ -119,41 +119,19 @@ document.addEventListener("DOMContentLoaded", () => {
     me.y += velocityY;
 
     // 画面の境界で反射
-    if (me.x <= 0) {
-      me.x = 0;
-      velocityX = -velocityX;
-    } else if (me.x + size >= canvas.width) {
-      me.x = canvas.width - size;
-      velocityX = -velocityX;
-    }
-
-    if (me.y <= 0) {
-      me.y = 0;
-      velocityY = -velocityY;
-    } else if (me.y + size >= canvas.height) {
-      me.y = canvas.height - size;
-      velocityY = -velocityY;
-    }
+    if (me.x <= 0) { me.x = 0; velocityX = -velocityX; }
+    else if (me.x + size >= canvas.width) { me.x = canvas.width - size; velocityX = -velocityX; }
+    if (me.y <= 0) { me.y = 0; velocityY = -velocityY; }
+    else if (me.y + size >= canvas.height) { me.y = canvas.height - size; velocityY = -velocityY; }
 
     // 慣性減速
     velocityX *= friction;
     velocityY *= friction;
 
-    // サーバー送信（現在の加算速度を送信）
-    socket.emit("move", { x: velocityX, y: velocityY });
+    // ★絶対座標で送信
+    socket.emit("move", { x: me.x, y: me.y });
 
     draw();
     requestAnimationFrame(animateMove);
   }
 });
-
-
-
-
-
-
-
-
-
-
-
