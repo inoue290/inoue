@@ -31,13 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // サーバーからプレイヤー情報を受信
   socket.on("state", serverPlayers => {
     players = serverPlayers;
-
-    // 向き情報を持たせる（初回のみ）
-    for (let id in players) {
-      if (!players[id].dir) players[id].dir = 1; // 初期は右向き
+    // 初回だけ自分のIDを取得
+    if (!myPlayerId) {
+      myPlayerId = Object.keys(players)[0];
     }
-
-    if (!myPlayerId) myPlayerId = Object.keys(players)[0];
+    // 向き情報初期化
+    for (let id in players) {
+      if (players[id].dir === undefined) players[id].dir = 1;
+      // 描画向きは速度Xの符号に従う
+      if (players[id].vx !== undefined) players[id].dir = players[id].vx >= 0 ? 1 : -1;
+    }
     draw();
   });
 
@@ -45,7 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     if (fieldImg.complete) ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
 
     for (let id in players) {
@@ -56,9 +58,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         ctx.save();
         if (p.dir === -1) {
-          ctx.translate(p.x + size / 2, 0);
+          ctx.translate(p.x + size/2, 0);
           ctx.scale(-1, 1);
-          ctx.drawImage(img, -size / 2, p.y, size, size);
+          ctx.drawImage(img, -size/2, p.y, size, size);
         } else {
           ctx.drawImage(img, p.x, p.y, size, size);
         }
@@ -75,9 +77,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- スワイプ操作 ---
   let startX, startY;
-  let velocityX = 0, velocityY = 0;
-  let isMoving = false;
-  const scale = 0.3;
 
   canvas.addEventListener("touchstart", e => {
     const t = e.touches[0];
@@ -90,50 +89,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    velocityX = dx * scale;
-    velocityY = dy * scale;
+    const scale = 0.3; // スワイプ距離→速度
+    const vx = dx * scale;
+    const vy = dy * scale;
 
-    // 向きを更新（右向き or 左向き）
-    if (myPlayerId && players[myPlayerId]) {
-      players[myPlayerId].dir = dx >= 0 ? 1 : -1;
-    }
-
-    if (!isMoving) {
-      isMoving = true;
-      animateMove();
-    }
+    // サーバーに移動量を送信
+    socket.emit("move", { x: vx, y: vy });
   });
 
-  function animateMove() {
-    if (!isMoving) return;
-
-    // 速度が小さくなったら停止
-    if (Math.abs(velocityX) < 0.5 && Math.abs(velocityY) < 0.5) {
-      isMoving = false;
-      return;
-    }
-
-    if (!myPlayerId || !players[myPlayerId]) return;
-    const p = players[myPlayerId];
-    const size = canvas.width * 0.15;
-
-    // 壁判定（クライアント描画用）
-    if (p.x + velocityX <= 0 || p.x + velocityX + size >= canvas.width) {
-      velocityX = -velocityX;           // ベクトル反転
-      p.dir = -p.dir;                   // 向き反転
-    }
-    if (p.y + velocityY <= 0 || p.y + velocityY + size >= canvas.height) {
-      velocityY = -velocityY;           // Y軸反射
-    }
-
-    // サーバー送信（加算分のみ）
-    socket.emit("move", { x: velocityX, y: velocityY });
-
-    // 慣性減速
-    velocityX *= 0.95;
-    velocityY *= 0.95;
-
+  // クライアント側は描画のみ
+  function animate() {
     draw();
-    requestAnimationFrame(animateMove);
+    requestAnimationFrame(animate);
   }
+  animate();
 });
+
+
