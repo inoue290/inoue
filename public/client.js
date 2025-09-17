@@ -57,18 +57,18 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.save();
     
         if (p.direction === "left") {
-          // 左向き：スケールを -1 にして反転
-          ctx.scale(-1, 1);
-          // x 座標も反転後の描画位置に合わせる
-          ctx.drawImage(img, -(p.x + size), p.y, size, size);
+          // 左向き → X軸反転
+          ctx.translate(p.x + size, p.y); // 基準位置を右端に移動
+          ctx.scale(-1, 1);              // X方向反転
+          ctx.drawImage(img, 0, 0, size, size);
         } else {
-          // 右向き：普通に描画
+          // 右向き（通常）
           ctx.drawImage(img, p.x, p.y, size, size);
         }
     
         ctx.restore();
     
-        // HPバー（反転しても位置は同じ）
+        // HPバー
         ctx.fillStyle = "red";
         ctx.fillRect(p.x, p.y - 12, size, 5);
         ctx.fillStyle = "green";
@@ -168,6 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
 
 
 
