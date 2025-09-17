@@ -6,14 +6,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// public 配下を静的ファイルとして配信
 app.use(express.static("public"));
 
-// プレイヤー情報
 let players = {};
 const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 
-// ゲーム画面サイズ
 const canvasWidth = 400;
 const canvasHeight = 664;
 const playerSize = 50;
@@ -38,10 +35,13 @@ io.on("connection", socket => {
     dir: 1
   };
 
+  // 自分のIDを通知
+  socket.emit("myId", socket.id);
+
   socket.emit("state", players);
   socket.broadcast.emit("state", players);
 
-  // クライアントからの移動入力
+  // クライアントからのスワイプ入力
   socket.on("move", data => {
     const p = players[socket.id];
     if (!p) return;
@@ -50,7 +50,7 @@ io.on("connection", socket => {
     p.vx += data.x;
     p.vy += data.y;
 
-    // 向きはX速度の符号
+    // 向きはX速度に従う
     if (p.vx !== 0) p.dir = p.vx >= 0 ? 1 : -1;
   });
 
@@ -61,7 +61,7 @@ io.on("connection", socket => {
   });
 });
 
-// ゲームループ（サーバー側で座標・反射・衝突を更新）
+// サーバーゲームループ（座標・壁・衝突・HP管理）
 setInterval(() => {
   for (let id in players) {
     const p = players[id];
@@ -70,7 +70,7 @@ setInterval(() => {
     p.x += p.vx;
     p.y += p.vy;
 
-    // 壁での反射
+    // 壁反射
     if (p.x <= 0) { p.x = 0; p.vx = Math.abs(p.vx); p.dir = 1; }
     if (p.x + playerSize >= canvasWidth) { p.x = canvasWidth - playerSize; p.vx = -Math.abs(p.vx); p.dir = -1; }
     if (p.y <= 0) { p.y = 0; p.vy = Math.abs(p.vy); }
@@ -99,11 +99,8 @@ setInterval(() => {
     }
   }
 
-  // 全員に状態送信
   io.emit("state", players);
-
-}, 1000/60); // 60FPS相当
+}, 1000/60); // 60FPS
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
-
