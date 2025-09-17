@@ -64,96 +64,171 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-// スワイプ操作
-let startX, startY;
-let velocityX = 0;
-let velocityY = 0;
-let isMoving = false;
+  // --- 前提 ---
+  // players は { id1: {x,y,hp,asset,direction}, id2: {...}, ... } の形である想定。
+  // socket は socket.io のソケット（ある場合）。なければ最初のプレイヤーを local に使う。
 
-const friction = 0.95;  // 摩擦係数
-const minVelocity = 0.5; // これ以下になったら停止
-const size = 50; // キャラクターサイズ
+  // スワイプ操作
+  let startX, startY;
+  let velocityX = 0;
+  let velocityY = 0;
+  let isMoving = false;
+  
+  // local player id（接続時に socket.id をセットして使うのが理想）
+  let localPlayerId = null;
+  
+  const friction = 0.95;  // 摩擦係数
+  const minVelocity = 0.5; // これ以下になったら停止
+  
+  // ベクトル反射関数
+  function reflectVector(vx, vy, nx, ny) {
+    const dot = vx * nx + vy * ny; // 内積
+    return {
+      x: vx - 2 * dot * nx,
+      y: vy - 2 * dot * ny
+    };
+  }
+  
+  // ローカルプレイヤーを確実に得るヘルパー
+  function ensureLocalPlayer() {
+    // 既に localPlayerId があり players にあればそれを返す
+    if (localPlayerId && players[localPlayerId]) return players[localPlayerId];
+  
+    // socket.id があれば優先して使う
+    if (typeof socket !== "undefined" && socket.id && players[socket.id]) {
+      localPlayerId = socket.id;
+      return players[localPlayerId];
+    }
+  
+    // それ以外は players の最初のキーを使う（単一プレイヤー環境向け）
+    const keys = Object.keys(players);
+    if (keys.length) {
+      localPlayerId = keys[0];
+      return players[localPlayerId];
+    }
+  
+    // それでも無ければ仮のローカルプレイヤーを作る
+    localPlayerId = "local";
+    players[localPlayerId] = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      hp: 100,
+      asset: null,
+      direction: "right"
+    };
+    return players[localPlayerId];
+  }
+  
+  // socket.io を使ってるなら接続時に localPlayerId を更新しておくと確実
+  if (typeof socket !== "undefined") {
+    socket.on("connect", () => {
+      localPlayerId = socket.id; // server と players の整合が取れていればこれでOK
+    });
+  }
+  
+  canvas.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+  });
+  
+  canvas.addEventListener("touchend", e => {
+    const me = ensureLocalPlayer();
+    if (!me) return;
+  
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+  
+    const scale = 0.3; // スワイプ距離 → 速度スケーリング
+    velocityX = dx * scale;
+    velocityY = dy * scale;
+  
+    // 向き判定（画像反転用）
+    if (velocityX < -0.5) me.direction = "left";
+    else if (velocityX > 0.5) me.direction = "right";
+  
+    // 既にアニメーションが走っていなければ起動（重複起動を防止）
+    if (!isMoving) {
+      isMoving = true;
+      requestAnimationFrame(animateMove);
+    }
+  });
+  
+  function animateMove() {
+    if (!isMoving) return;
+  
+    const me = ensureLocalPlayer();
+    if (!me) {
+      isMoving = false;
+      return;
+    }
+  
+    // キャラ描画サイズ（描画ループで使っているサイズに合わせる）
+    const charSize = Math.max(32, canvas.width * 0.15);
+  
+    // 速度が小さくなったら停止
+    if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
+      velocityX = 0;
+      velocityY = 0;
+      isMoving = false;
+      // 最終位置をサーバーに送る（必要なら）
+      if (typeof socket !== "undefined") socket.emit("move", { x: me.x, y: me.y, direction: me.direction });
+      return;
+    }
+  
+    // 座標更新
+    me.x += velocityX;
+    me.y += velocityY;
+  
+    // 壁での反射処理（衝突したら位置を境界内に戻して反射ベクトルを計算）
+    // 左壁
+    if (me.x <= 0) {
+      me.x = 0;
+      const r = reflectVector(velocityX, velocityY, 1, 0);
+      velocityX = r.x;
+      velocityY = r.y;
+      me.direction = velocityX < 0 ? "left" : "right";
+    }
+    // 右壁
+    else if (me.x + charSize >= canvas.width) {
+      me.x = canvas.width - charSize;
+      const r = reflectVector(velocityX, velocityY, -1, 0);
+      velocityX = r.x;
+      velocityY = r.y;
+      me.direction = velocityX < 0 ? "left" : "right";
+    }
+  
+    // 上壁
+    if (me.y <= 0) {
+      me.y = 0;
+      const r = reflectVector(velocityX, velocityY, 0, 1);
+      velocityX = r.x;
+      velocityY = r.y;
+    }
+    // 下壁
+    else if (me.y + charSize >= canvas.height) {
+      me.y = canvas.height - charSize;
+      const r = reflectVector(velocityX, velocityY, 0, -1);
+      velocityX = r.x;
+      velocityY = r.y;
+    }
+  
+    // 慣性減速
+    velocityX *= friction;
+    velocityY *= friction;
+  
+    // サーバー送信など（位置と向き）
+    if (typeof socket !== "undefined") {
+      socket.emit("move", { x: me.x, y: me.y, direction: me.direction });
+    }
+  
+    // 次フレーム
+    requestAnimationFrame(animateMove);
+  }
 
-// ベクトル反射関数
-function reflectVector(vx, vy, nx, ny) {
-  const dot = vx * nx + vy * ny; // 内積
-  return {
-    x: vx - 2 * dot * nx,
-    y: vy - 2 * dot * ny
-  };
-}
-
-canvas.addEventListener("touchstart", e => {
-  const t = e.touches[0];
-  startX = t.clientX;
-  startY = t.clientY;
 });
 
-canvas.addEventListener("touchend", e => {
-  const t = e.changedTouches[0];
-  const dx = t.clientX - startX;
-  const dy = t.clientY - startY;
-
-  const scale = 0.3; // スワイプ距離 → 速度スケーリング
-  velocityX = dx * scale;
-  velocityY = dy * scale;
-
-  if (!isMoving) {  // ★二重実行を防ぐ
-    isMoving = true;
-    animateMove();
-  }
-});
-
-function animateMove() {
-  if (!isMoving) return;
-
-  // 速度が小さくなったら停止
-  if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
-    isMoving = false;
-    return;
-  }
-
-  // 座標更新
-  players.x += velocityX;
-  players.y += velocityY;
-
-  // 壁での反射処理
-  // 左右の壁
-  if (players.x <= 0) {
-    players.x = 0;
-    const r = reflectVector(velocityX, velocityY, 1, 0); // 法線 (1,0)
-    velocityX = r.x;
-    velocityY = r.y;
-  } else if (players.x + size >= canvas.width) {
-    players.x = canvas.width - size;
-    const r = reflectVector(velocityX, velocityY, -1, 0); // 法線 (-1,0)
-    velocityX = r.x;
-    velocityY = r.y;
-  }
-
-  // 上下の壁
-  if (players.y <= 0) {
-    players.y = 0;
-    const r = reflectVector(velocityX, velocityY, 0, 1); // 法線 (0,1)
-    velocityX = r.x;
-    velocityY = r.y;
-  } else if (players.y + size >= canvas.height) {
-    players.y = canvas.height - size;
-    const r = reflectVector(velocityX, velocityY, 0, -1); // 法線 (0,-1)
-    velocityX = r.x;
-    velocityY = r.y;
-  }
-
-  // 慣性減速
-  velocityX *= friction;
-  velocityY *= friction;
-
-  // サーバー送信など
-  socket.emit("move", { x: players.x, y: players.y });
-
-  requestAnimationFrame(animateMove);
-}
-});
 
 
 
