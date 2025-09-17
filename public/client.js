@@ -64,97 +64,78 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // スワイプ操作
-  let startX, startY;
-  let velocityX = 0;
-  let velocityY = 0;
-  let isMoving = false;
-  
-  const friction = 0.95;  // 摩擦係数
-  const minVelocity = 0.5; // これ以下になったら停止
-  const size = 50; // キャラクターサイズ
-  
-  // ベクトル反射関数
-  function reflectVector(vx, vy, nx, ny) {
-    const dot = vx * nx + vy * ny; // 内積
-    return {
-      x: vx - 2 * dot * nx,
-      y: vy - 2 * dot * ny
-    };
-  }
-  
-  canvas.addEventListener("touchstart", e => {
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-  });
-  
-  canvas.addEventListener("touchend", e => {
-    const t = e.changedTouches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-  
-    const scale = 0.3; // スワイプ距離 → 速度スケーリング
-    velocityX = dx * scale;
-    velocityY = dy * scale;
-  
-    if (!isMoving) {  // ★二重実行を防ぐ
-      isMoving = true;
-      animateMove();
+    // スワイプ操作
+    let startX, startY;
+    let velocityX = 0;
+    let velocityY = 0;
+    let isMoving = false;
+    
+    const friction = 0.95;  // 摩擦係数
+    const minVelocity = 0.5; // これ以下になったら停止
+    const size = 50; // キャラクターサイズ（固定 or 計算してもOK）
+    
+    canvas.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+    });
+    
+    canvas.addEventListener("touchend", e => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+    
+      const scale = 0.3; // スワイプ距離 → 速度スケーリング
+      velocityX = dx * scale;
+      velocityY = dy * scale;
+    
+      if (!isMoving) {      // ★二重実行を防ぐ
+        isMoving = true;
+        animateMove();
+      }
+    });
+    
+    function animateMove() {
+      if (!isMoving) return;
+    
+      // 速度が小さくなったら停止
+      if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
+        isMoving = false;
+        return;
+      }
+    
+      // 座標更新
+      players.x += velocityX;
+      players.y += velocityY;
+    
+      // 画面の境界で反射
+      if (players.x <= 0) {
+        players.x = 0;
+        velocityX = -velocityX;
+      } else if (players.x + size >= canvas.width) {
+        players.x = canvas.width - size;
+        velocityX = -velocityX;
+      }
+    
+      if (players.y <= 0) {
+        players.y = 0;
+        velocityY = -velocityY;
+      } else if (players.y + size >= canvas.height) {
+        players.y = canvas.height - size;
+        velocityY = -velocityY;
+      }
+    
+      // 慣性減速
+      velocityX *= friction;
+      velocityY *= friction;
+    
+      // サーバー送信など
+      socket.emit("move", { x: players.x, y: players.y });
+    
+      requestAnimationFrame(animateMove);
     }
-  });
-  
-  function animateMove() {
-    if (!isMoving) return;
-  
-    // 速度が小さくなったら停止
-    if (Math.abs(velocityX) < minVelocity && Math.abs(velocityY) < minVelocity) {
-      isMoving = false;
-      return;
-    }
-  
-    // 座標更新
-    players.x += velocityX;
-    players.y += velocityY;
-  
-    // 壁での反射処理
-    // 左右の壁
-    if (players.x <= 0) {
-      players.x = 0;
-      const r = reflectVector(velocityX, velocityY, 1, 0); // 法線 (1,0)
-      velocityX = r.x;
-      velocityY = r.y;
-    } else if (players.x + size >= canvas.width) {
-      players.x = canvas.width - size;
-      const r = reflectVector(velocityX, velocityY, -1, 0); // 法線 (-1,0)
-      velocityX = r.x;
-      velocityY = r.y;
-    }
-  
-    // 上下の壁
-    if (players.y <= 0) {
-      players.y = 0;
-      const r = reflectVector(velocityX, velocityY, 0, 1); // 法線 (0,1)
-      velocityX = r.x;
-      velocityY = r.y;
-    } else if (players.y + size >= canvas.height) {
-      players.y = canvas.height - size;
-      const r = reflectVector(velocityX, velocityY, 0, -1); // 法線 (0,-1)
-      velocityX = r.x;
-      velocityY = r.y;
-    }
-  
-    // 慣性減速
-    velocityX *= friction;
-    velocityY *= friction;
-  
-    // サーバー送信など
-    socket.emit("move", { x: players.x, y: players.y });
-  
-    requestAnimationFrame(animateMove);
-  }
-
 });
+
 
 
 
