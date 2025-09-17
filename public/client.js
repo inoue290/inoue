@@ -57,9 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.save();
     
         if (p.direction === "left") {
-          // 左向き → X軸反転
-          ctx.translate(p.x + size, p.y); // 基準位置を右端に移動
-          ctx.scale(-1, 1);              // X方向反転
+          // 左向きのとき
+          ctx.translate(p.x + size, p.y); // 右端を基準に
+          ctx.scale(-1, 1);               // X方向を反転
           ctx.drawImage(img, 0, 0, size, size);
         } else {
           // 右向き（通常）
@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
         ctx.restore();
     
-        // HPバー
+        // HPバーは通常通り描画（座標変形の影響を受けない）
         ctx.fillStyle = "red";
         ctx.fillRect(p.x, p.y - 12, size, 5);
         ctx.fillStyle = "green";
@@ -168,6 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
 
 
 
