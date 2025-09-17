@@ -13,7 +13,7 @@ const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 
 const canvasWidth = 352;
 const canvasHeight = 606;
-const playerSize = 100;
+const playerSize = 75;
 const friction = 0.95;
 const minVelocity = 0.5;
 
@@ -104,6 +104,7 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
 
 
