@@ -87,7 +87,7 @@ io.on("connection", socket => {
     const p = players[socket.id];
     if (!p) return;
 
-    const attackRange = 100;
+    const attackRange = 150;
     const attackAngle = Math.atan2(dy, dx);
 
     for (let eid in enemies) {
@@ -99,7 +99,8 @@ io.on("connection", socket => {
 
       let angleDiff = Math.abs(enemyAngle - attackAngle);
       if (angleDiff > Math.PI) angleDiff = 2*Math.PI - angleDiff;
-
+      
+      const hitRadius = playerSize / 2 + 10; // 判定半径
       if (dist <= attackRange && angleDiff < Math.PI / 4) {
         e.hp -= power;
         if (e.hp <= 0) {
@@ -189,6 +190,7 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
 
 
