@@ -91,19 +91,14 @@ io.on("connection", socket => {
 
     for (let eid in enemies) {
       const e = enemies[eid];
-      const dxEnemy = e.x - p.x;
-      const dyEnemy = e.y - p.y;
+      const dxEnemy = e.x + playerSize/2 - (p.x + playerSize/2); // 中心で判定
+      const dyEnemy = e.y + playerSize/2 - (p.y + playerSize/2);
       const dist = Math.sqrt(dxEnemy*dxEnemy + dyEnemy*dyEnemy);
-      const enemyAngle = Math.atan2(dyEnemy, dxEnemy);
-
-      let angleDiff = Math.abs(enemyAngle - attackAngle);
-      if (angleDiff > Math.PI) angleDiff = 2*Math.PI - angleDiff;
-
-      const hitRadius = playerSize / 2 + 10; // 判定半径
-      if (dist <= hitRadius && angleDiff < Math.PI / 4) {
-        e.hp -= power;
+    
+      if (dist <= attackRange) {
+        e.hp -= Math.max(power, 1); // 最低1ダメージは入るように
         if (e.hp <= 0) {
-          respawnEnemy(eid); // 倒れたら自動再生成
+          respawnEnemy(eid);
         }
       }
     }
@@ -189,3 +184,4 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
