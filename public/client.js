@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const e = enemies[id];
       const img = images[e.asset];
       if (img && img.complete) {
-        const size = 75;
+        const size = 120;
 
         ctx.save();
         if (e.dir === -1) {
@@ -132,5 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   animate();
 });
+
 
 
