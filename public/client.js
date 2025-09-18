@@ -120,6 +120,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const scale = 0.18; // スワイプ距離→速度
     socket.emit("move", { x: dx*scale, y: dy*scale });
+
+      // スワイプ方向に攻撃も送信
+    const attackPower = 10; // ダメージ量
+    socket.emit("attack", { dx, dy, power: attackPower });
   });
 
   function animate() {
@@ -128,3 +132,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   animate();
 });
+
