@@ -11,11 +11,35 @@ app.use(express.static("public"));
 let players = {};
 const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 
+let enemies = {}; // ← 追加
+const enemyCount = 5;
+const enemyAssetList = ["enemy1.png", "enemy2.png"];
+
 const canvasWidth = 352;
 const canvasHeight = 606;
 const playerSize = 75;
 const friction = 0.95;
 const minVelocity = 0.5;
+
+function spawnEnemies() {
+  for (let i = 0; i < enemyCount; i++) {
+    const id = "enemy_" + i;
+    const randomX = Math.floor(Math.random() * (canvasWidth - playerSize));
+    const randomY = Math.floor(Math.random() * (canvasHeight - playerSize));
+    const randomAsset = enemyAssetList[Math.floor(Math.random() * enemyAssetList.length)];
+    enemies[id] = {
+      x: randomX,
+      y: randomY,
+      hp: 50,
+      asset: randomAsset,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4,
+      dir: 1
+    };
+  }
+}
+
+spawnEnemies(); // サーバー起動時に敵を出す
 
 io.on("connection", socket => {
   console.log("接続:", socket.id);
@@ -99,13 +123,41 @@ setInterval(() => {
     }
   }
 
-  io.emit("state", players);
+  // 敵の動作
+    for (let id in enemies) {
+    const e = enemies[id];
+
+    // 移動
+    e.x += e.vx;
+    e.y += e.vy;
+
+    // 壁反射
+    if (e.x <= 0) { e.x = 0; e.vx = Math.abs(e.vx); e.dir = 1; }
+    if (e.x + playerSize >= canvasWidth) { e.x = canvasWidth - playerSize; e.vx = -Math.abs(e.vx); e.dir = -1; }
+    if (e.y <= 0) { e.y = 0; e.vy = Math.abs(e.vy); }
+    if (e.y + playerSize >= canvasHeight) { e.y = canvasHeight - playerSize; e.vy = -Math.abs(e.vy); }
+
+    // プレイヤーとの当たり判定
+    for (let pid in players) {
+        const p = players[pid];
+        const dx = p.x - e.x;
+        const dy = p.y - e.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < playerSize) {
+        p.hp -= 1;
+        if (p.hp <= 0) {
+            io.to(pid).emit("youDied");
+            delete players[pid];
+        }
+        }
+    }
+    }
+
+  io.emit("state", { players, enemies });
 }, 1000/60); // 60FPS
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
-
-
 
 
 
