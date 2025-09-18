@@ -12,8 +12,9 @@ let players = {};
 const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 
 let enemies = {}; // ← 追加
-const enemyCount = 5;
+const enemyCount = 1;
 const enemyAssetList = ["enemy1.png", "enemy2.png"];
+const attackCooldown = 1000; // 1秒に1回
 
 const canvasWidth = 352;
 const canvasHeight = 606;
@@ -24,17 +25,15 @@ const minVelocity = 0.5;
 function spawnEnemies() {
   for (let i = 0; i < enemyCount; i++) {
     const id = "enemy_" + i;
-    const randomX = Math.floor(Math.random() * (canvasWidth - playerSize));
-    const randomY = Math.floor(Math.random() * (canvasHeight - playerSize));
-    const randomAsset = enemyAssetList[Math.floor(Math.random() * enemyAssetList.length)];
     enemies[id] = {
-      x: randomX,
-      y: randomY,
+      x: Math.random() * (canvasWidth - playerSize),
+      y: Math.random() * (canvasHeight - playerSize),
       hp: 50,
-      asset: randomAsset,
+      asset: enemyAssetList[Math.floor(Math.random() * enemyAssetList.length)],
       vx: (Math.random() - 0.5) * 4,
       vy: (Math.random() - 0.5) * 4,
-      dir: 1
+      dir: 1,
+      lastAttack: 0 // 👈 追加
     };
   }
 }
@@ -158,6 +157,7 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
 
 
