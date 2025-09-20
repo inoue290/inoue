@@ -14,7 +14,6 @@ const assetList = ["char1.png","char2.png","char3.png","char4.png"];
 let enemies = {};
 const enemyCount = 1;
 const enemyAssetList = ["enemy1.png", "enemy2.png"];
-const attackCooldown = 1000; // 1秒に1回
 
 const canvasWidth = 352;
 const canvasHeight = 606;
@@ -27,12 +26,11 @@ function createEnemy() {
   return {
     x: Math.random() * (canvasWidth - playerSize),
     y: Math.random() * (canvasHeight - playerSize),
-    hp: 50, // HP増加
+    hp: 50,
     asset: enemyAssetList[Math.floor(Math.random() * enemyAssetList.length)],
     vx: (Math.random() - 0.5) * 4,
     vy: (Math.random() - 0.5) * 4,
-    dir: 1,
-    lastAttack: 0
+    dir: 1
   };
 }
 
@@ -52,25 +50,31 @@ spawnEnemies(); // サーバー起動時に敵を出す
 io.on("connection", socket => {
   console.log("接続:", socket.id);
 
-  // ランダムな初期位置とキャラクター
+  // ランダムな初期位置（キャラクター選択前はnull）
   const randomX = Math.floor(Math.random() * (canvasWidth - playerSize));
   const randomY = Math.floor(Math.random() * (canvasHeight - playerSize));
-  const randomAsset = assetList[Math.floor(Math.random() * assetList.length)];
 
   players[socket.id] = {
     x: randomX,
     y: randomY,
     hp: 100,
-    asset: randomAsset,
+    asset: null, // 選択前
     vx: 0,
     vy: 0,
     dir: 1
   };
 
-  // 自分のIDを通知
   socket.emit("myId", socket.id);
-  socket.emit("state", { players, enemies });
-  socket.broadcast.emit("state", { players, enemies });
+  io.emit("state", { players, enemies });
+
+  // --- キャラクター選択 ---
+  socket.on("chooseCharacter", assetName => {
+    if (assetList.includes(assetName) && players[socket.id]) {
+      players[socket.id].asset = assetName;
+      console.log(`${socket.id} が ${assetName} を選択`);
+      io.emit("state", { players, enemies });
+    }
+  });
 
   // --- 移動 ---
   socket.on("move", data => {
@@ -85,21 +89,16 @@ io.on("connection", socket => {
   socket.on("attack", ({ dx, dy, power }) => {
     const p = players[socket.id];
     if (!p) return;
-
-    const attackRange = 150; // 攻撃範囲を広く
-    const attackAngle = Math.atan2(dy, dx);
+    const attackRange = 150;
 
     for (let eid in enemies) {
       const e = enemies[eid];
-      const dxEnemy = e.x + playerSize/2 - (p.x + playerSize/2); // 中心で判定
+      const dxEnemy = e.x + playerSize/2 - (p.x + playerSize/2);
       const dyEnemy = e.y + playerSize/2 - (p.y + playerSize/2);
       const dist = Math.sqrt(dxEnemy*dxEnemy + dyEnemy*dyEnemy);
-    
       if (dist <= attackRange) {
-        e.hp -= Math.max(power, 1); // 最低1ダメージは入るように
-        if (e.hp <= 0) {
-          respawnEnemy(eid);
-        }
+        e.hp -= Math.max(power, 1);
+        if (e.hp <= 0) respawnEnemy(eid);
       }
     }
   });
@@ -114,74 +113,37 @@ io.on("connection", socket => {
 
 // --- ゲームループ ---
 setInterval(() => {
-  // プレイヤー処理
   for (let id in players) {
     const p = players[id];
     p.x += p.vx;
     p.y += p.vy;
 
-    // 壁反射
     if (p.x <= 0) { p.x = 0; p.vx = Math.abs(p.vx); p.dir = 1; }
     if (p.x + playerSize >= canvasWidth) { p.x = canvasWidth - playerSize; p.vx = -Math.abs(p.vx); p.dir = -1; }
     if (p.y <= 0) { p.y = 0; p.vy = Math.abs(p.vy); }
     if (p.y + playerSize >= canvasHeight) { p.y = canvasHeight - playerSize; p.vy = -Math.abs(p.vy); }
 
-    // 慣性減速
     p.vx *= friction;
     p.vy *= friction;
     if (Math.abs(p.vx) < minVelocity) p.vx = 0;
     if (Math.abs(p.vy) < minVelocity) p.vy = 0;
-
-    // 他プレイヤーとの衝突
-    for (let otherId in players) {
-      if (otherId === id) continue;
-      const o = players[otherId];
-      const dx = p.x - o.x;
-      const dy = p.y - o.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const collisionRadius = playerSize * 1.2;
-      if (dist < collisionRadius) {
-        o.hp -= 10;
-        if (o.hp <= 0) {
-          io.to(otherId).emit("youDied");
-          delete players[otherId];
-        }
-      }
-    }
   }
 
-  // 敵処理
   for (let id in enemies) {
     const e = enemies[id];
     e.x += e.vx;
     e.y += e.vy;
 
-    // 壁反射
     if (e.x <= 0) { e.x = 0; e.vx = Math.abs(e.vx); e.dir = 1; }
     if (e.x + playerSize >= canvasWidth) { e.x = canvasWidth - playerSize; e.vx = -Math.abs(e.vx); e.dir = -1; }
     if (e.y <= 0) { e.y = 0; e.vy = Math.abs(e.vy); }
     if (e.y + playerSize >= canvasHeight) { e.y = canvasHeight - playerSize; e.vy = -Math.abs(e.vy); }
-
-    // プレイヤーとの衝突
-    for (let pid in players) {
-      const p = players[pid];
-      const dx = p.x - e.x;
-      const dy = p.y - e.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const collisionRadius = playerSize * 1.2;
-      if (dist < collisionRadius) {
-        p.hp -= 1;
-        if (p.hp <= 0) {
-          io.to(pid).emit("youDied");
-          delete players[pid];
-        }
-      }
-    }
   }
 
   io.emit("state", { players, enemies });
-}, 1000/60); // 60FPS
+}, 1000/60);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
