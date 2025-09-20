@@ -140,10 +140,37 @@ setInterval(() => {
     if (e.y + playerSize >= canvasHeight) { e.y = canvasHeight - playerSize; e.vy = -Math.abs(e.vy); }
   }
 
+  // --- ここから敵との衝突判定 ---
+  for (let eid in enemies) {
+    const e = enemies[eid];
+  
+    for (let pid in players) {
+      const p = players[pid];
+  
+      const pxCenter = p.x + playerSize/2;
+      const pyCenter = p.y + playerSize/2;
+      const exCenter = e.x + playerSize/2;
+      const eyCenter = e.y + playerSize/2;
+  
+      const dx = pxCenter - exCenter;
+      const dy = pyCenter - eyCenter;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const collisionRadius = playerSize * 0.75 + playerSize * 0.75;
+  
+      if (dist < collisionRadius) {
+        p.hp -= 5; // HP減少量
+        if (p.hp <= 0) {
+          io.to(pid).emit("youDied");
+          delete players[pid];
+        }
+      }
+    }
+  }
   io.emit("state", { players, enemies });
 }, 1000/60);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
 
