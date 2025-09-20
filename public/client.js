@@ -50,6 +50,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   socket.on("youDied", () => window.location.href = "/delete.html");
 
+    // キャラクター選択
+  window.chooseCharacter = function(assetName) {
+    socket.emit("chooseCharacter", assetName);
+    document.getElementById("charSelect").style.display = "none"; // 選択後非表示
+  };
+
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (fieldImg.complete) ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);

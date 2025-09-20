@@ -10,9 +10,22 @@
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<script src="/socket.io/socket.io.js"></script>
-<script src="client.js"></script>
+  <!-- キャラクター選択 -->
+  <div id="charSelect" style="
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    background:#fff;padding:20px;border-radius:10px;text-align:center;
+  ">
+    <h2>キャラクターを選択してください</h2>
+    <button onclick="chooseCharacter('char1.png')">キャラ1</button>
+    <button onclick="chooseCharacter('char2.png')">キャラ2</button>
+    <button onclick="chooseCharacter('char3.png')">キャラ3</button>
+    <button onclick="chooseCharacter('char4.png')">キャラ4</button>
+  </div>
+
+  <canvas id="game"></canvas>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
 </body>
 </html>
 
