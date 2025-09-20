@@ -28,8 +28,8 @@ function createEnemy() {
     y: Math.random() * (canvasHeight - playerSize),
     hp: 50,
     asset: enemyAssetList[Math.floor(Math.random() * enemyAssetList.length)],
-    vx: (Math.random() - 0.5) * 4,
-    vy: (Math.random() - 0.5) * 4,
+    vx: (Math.random() - 0.5) * 8,
+    vy: (Math.random() - 0.5) * 8,
     dir: 1
   };
 }
@@ -163,6 +163,7 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("サーバー起動:", PORT));
+
 
 
 
