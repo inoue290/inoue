@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", resizeCanvas);
 
   let players = {};
-  let enemies = {};   // 👈 追加
+  let enemies = {};
   let myPlayerId = null;
   const images = {};
 
@@ -38,10 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
     images[src] = img;
   });
 
-  // サーバーから自分のID
   socket.on("myId", id => myPlayerId = id);
 
-  // サーバーから状態更新
   socket.on("state", ({ players: serverPlayers, enemies: serverEnemies }) => {
     players = serverPlayers;
     enemies = serverEnemies;
@@ -50,10 +48,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   socket.on("youDied", () => window.location.href = "/delete.html");
 
-    // キャラクター選択
+  // --- キャラクター選択 ---
   window.chooseCharacter = function(assetName) {
     socket.emit("chooseCharacter", assetName);
-    document.getElementById("charSelect").style.display = "none"; // 選択後非表示
+    document.getElementById("charSelect").style.display = "none";
   };
 
   function draw() {
@@ -63,51 +61,49 @@ document.addEventListener("DOMContentLoaded", () => {
     // プレイヤー描画
     for (let id in players) {
       const p = players[id];
+      if (!p.asset) continue; // キャラ未選択は描画しない
       const img = images[p.asset];
-      if (img && img.complete) {
-        const size = 75;
+      if (!img || !img.complete) continue;
 
-        ctx.save();
-        if (p.dir === -1) {
-          ctx.translate(p.x + size/2, 0);
-          ctx.scale(-1,1);
-          ctx.drawImage(img, -size/2, p.y, size, size);
-        } else {
-          ctx.drawImage(img, p.x, p.y, size, size);
-        }
-        ctx.restore();
-
-        // HPバー
-        ctx.fillStyle = "red";
-        ctx.fillRect(p.x, p.y - 12, size, 5);
-        ctx.fillStyle = "green";
-        ctx.fillRect(p.x, p.y - 12, (p.hp/100)*size, 5);
+      const size = 75;
+      ctx.save();
+      if (p.dir === -1) {
+        ctx.translate(p.x + size/2, 0);
+        ctx.scale(-1,1);
+        ctx.drawImage(img, -size/2, p.y, size, size);
+      } else {
+        ctx.drawImage(img, p.x, p.y, size, size);
       }
+      ctx.restore();
+
+      // HPバー
+      ctx.fillStyle = "red";
+      ctx.fillRect(p.x, p.y - 12, size, 5);
+      ctx.fillStyle = "green";
+      ctx.fillRect(p.x, p.y - 12, (p.hp/100)*size, 5);
     }
 
-    // 敵描画 👇
+    // 敵描画
     for (let id in enemies) {
       const e = enemies[id];
       const img = images[e.asset];
-      if (img && img.complete) {
-        const size = 120;
-
-        ctx.save();
-        if (e.dir === -1) {
-          ctx.translate(e.x + size/2, 0);
-          ctx.scale(-1,1);
-          ctx.drawImage(img, -size/2, e.y, size, size);
-        } else {
-          ctx.drawImage(img, e.x, e.y, size, size);
-        }
-        ctx.restore();
-
-        // HPバー
-        ctx.fillStyle = "red";
-        ctx.fillRect(e.x, e.y - 12, size, 5);
-        ctx.fillStyle = "green";
-        ctx.fillRect(e.x, e.y - 12, (e.hp/50)*size, 5); // 敵HPは50基準
+      if (!img || !img.complete) continue;
+      const size = 120;
+      ctx.save();
+      if (e.dir === -1) {
+        ctx.translate(e.x + size/2, 0);
+        ctx.scale(-1,1);
+        ctx.drawImage(img, -size/2, e.y, size, size);
+      } else {
+        ctx.drawImage(img, e.x, e.y, size, size);
       }
+      ctx.restore();
+
+      // HPバー
+      ctx.fillStyle = "red";
+      ctx.fillRect(e.x, e.y - 12, size, 5);
+      ctx.fillStyle = "green";
+      ctx.fillRect(e.x, e.y - 12, (e.hp/50)*size, 5);
     }
   }
 
@@ -123,12 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
-
-    const scale = 0.18; // スワイプ距離→速度
+    const scale = 0.18;
     socket.emit("move", { x: dx*scale, y: dy*scale });
-
-    // スワイプ方向に攻撃も送信
-    const attackPower = 10; // ダメージ量
+    const attackPower = 10;
     socket.emit("attack", { dx, dy, power: attackPower });
   });
 
@@ -138,6 +131,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   animate();
 });
-
-
 
